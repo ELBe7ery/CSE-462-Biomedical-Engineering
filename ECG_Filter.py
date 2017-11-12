@@ -45,10 +45,11 @@ class ECG_Filter(object):
         self.data_filtered_avg = None
         self._data_filtered = None
         self.r_peaks = None
+        self.rr_interval = None
         self.f_sampling = f_sampling
         self.threshold = None
 
-    def filter_avg(self, avg_window_size, notch_freq=50.0):
+    def filter_avg(self, avg_window_size, notch_freq=50.0, no_filter=0):
         """
         Performs all the filter function on the loaded data. The method will not
         perform the first two filtering stages [finite diff, square] if dont_filter==True
@@ -68,6 +69,7 @@ class ECG_Filter(object):
         high = 45 / nyq
         b, a = signal.butter(2, [low, high], btype='band')
         self.data_filtered = signal.lfilter(b, a, self.data_filtered)
+        if no_filter==1 : self.data_filtered = self.data
         #####################################################
 
         # perform 5-point difference
@@ -82,21 +84,27 @@ class ECG_Filter(object):
         self.data_filtered_avg /= avg_window_size
 
         self.r_peaks = np.zeros([self.data_filtered_avg.shape[0],])
-        self.threshold = 0.6*np.max(self.data_filtered_avg)
+        th_ratio = 0.6
+        if no_filter==1:
+            # bigger ratio to avoid capturing low points
+            th_ratio = 0.8
+        self.threshold = th_ratio*np.max(self.data_filtered_avg)
         for i in range(0, self.data_filtered_avg.shape[0], avg_window_size):
             max_idx = np.argmax(self.data_filtered_avg[i:i+avg_window_size])+i
-            if(i>=avg_window_size):
+            if i >= avg_window_size:
                 past_max_idx = np.argmax(self.r_peaks[i-avg_window_size:i])+(i-avg_window_size)
             else:
                 past_max_idx=0
-            if(max_idx>700):
-                None
             val = self.data_filtered_avg[max_idx]
             past_val = self.r_peaks[past_max_idx]
             val = val * (val > self.threshold) * (val > past_val)
             past_val = past_val * (past_val > val)
             self.r_peaks[max_idx] = val
             self.r_peaks[past_max_idx] = past_val
+        self.rr_interval = np.nonzero(self.r_peaks)[0].astype('float')
         # dont show zeros
-        self.r_peaks[ self.r_peaks==0 ] = np.nan
+        self.r_peaks[self.r_peaks == 0] = np.nan
+        self.rr_interval = self.rr_interval[1:] - self.rr_interval[:-1]
+        # msec scale
+        self.rr_interval *= (1e3)/self.f_sampling
 
