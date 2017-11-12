@@ -27,7 +27,8 @@ class ECG_Filter(object):
     ### The features implemented are
     + 5 Point difference algorithm
     + Moving average technique with N as an argument
-    + Threshold detection
+    + Threshold value calculation
+    + R-peak detection algorithm
 
     ## Args
     + file_name : the file name containing the ECG samples
@@ -36,15 +37,16 @@ class ECG_Filter(object):
     + f_sampling : the sampling frequency
     """
 
-    def __init__(self, file_name="DataN.txt", threshold=None, f_sampling=256.0):
+    def __init__(self, file_name="DataN.txt", f_sampling=256.0):
         self.data = np.loadtxt(file_name)
         # for display purposes
         self.data_filtered = None
         # for display purposes
         self.data_filtered_avg = None
         self._data_filtered = None
+        self.r_peaks = None
         self.f_sampling = f_sampling
-        self.threshold = threshold
+        self.threshold = None
 
     def filter_avg(self, avg_window_size, notch_freq=50.0):
         """
@@ -77,6 +79,24 @@ class ECG_Filter(object):
         self.data_filtered_avg = np.copy(self._data_filtered[avg_window_size:])
         for i in range(avg_window_size):
             self.data_filtered_avg += self._data_filtered[i:-avg_window_size+i]
-
         self.data_filtered_avg /= avg_window_size
+
+        self.r_peaks = np.zeros([self.data_filtered_avg.shape[0],])
+        self.threshold = 0.6*np.max(self.data_filtered_avg)
+        for i in range(0, self.data_filtered_avg.shape[0], avg_window_size):
+            max_idx = np.argmax(self.data_filtered_avg[i:i+avg_window_size])+i
+            if(i>=avg_window_size):
+                past_max_idx = np.argmax(self.r_peaks[i-avg_window_size:i])+(i-avg_window_size)
+            else:
+                past_max_idx=0
+            if(max_idx>700):
+                None
+            val = self.data_filtered_avg[max_idx]
+            past_val = self.r_peaks[past_max_idx]
+            val = val * (val > self.threshold) * (val > past_val)
+            past_val = past_val * (past_val > val)
+            self.r_peaks[max_idx] = val
+            self.r_peaks[past_max_idx] = past_val
+        # dont show zeros
+        self.r_peaks[ self.r_peaks==0 ] = np.nan
 
