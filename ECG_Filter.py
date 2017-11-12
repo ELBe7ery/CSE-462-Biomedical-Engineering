@@ -37,7 +37,7 @@ class ECG_Filter(object):
     + f_sampling : the sampling frequency
     """
 
-    def __init__(self, file_name="DataN.txt", f_sampling=256.0):
+    def __init__(self, file_name="data_set//DataN.txt", f_sampling=256.0):
         self.data = np.loadtxt(file_name)
         # for display purposes
         self.data_filtered = None
