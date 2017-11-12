@@ -10,13 +10,24 @@ from scipy import signal
 import pylab
 
 
-class Filter(object):
+class ECG_Filter(object):
     """
-    A class impleminting the ECG filter. The filer performs
-    + A 5 point different to check large slope regions
+    A class impleminting the ECG filter. The filter performs
+    + Notch filter to remove the power-line noise followed by a BPF
+    + A 5 point difference to check large slope regions
     + Then square the difference array to poroduce positive samples
     + Then an average window algorithm is applied to the samples for a smoother curve
     + A threshold is assigned to capture the QRS [the R peak]
+
+    ### The only used built-in functions are
+    + sympy.signal.iirnotch : to generate the notch filter components
+    + sympy.signal.butter : to generate the band pass filter components
+    + sympy.signal.lfilter : to apply the filter over the signals
+
+    ### The features implemented are
+    + 5 Point difference algorithm
+    + Moving average technique with N as an argument
+    + Threshold detection
 
     ## Args
     + file_name : the file name containing the ECG samples
@@ -31,6 +42,7 @@ class Filter(object):
         self.data_filtered = None
         # for display purposes
         self.data_filtered_avg = None
+        self._data_filtered = None
         self.f_sampling = f_sampling
         self.threshold = threshold
 
@@ -45,28 +57,26 @@ class Filter(object):
         """
         #####################################################
         ### NOTCH FILTER REGION
-        ### A built-in function implements the filter
+        ### A built-in function that implements the filter
         w0 = notch_freq/(self.f_sampling/2)
         b, a = signal.iirnotch(w0, 30.0)
         self.data_filtered = signal.lfilter(b, a, self.data)
+        nyq = 0.5 * self.f_sampling
+        low = 0.1 / nyq
+        high = 45 / nyq
+        b, a = signal.butter(2, [low, high], btype='band')
+        self.data_filtered = signal.lfilter(b, a, self.data_filtered)
         #####################################################
 
-        self.data_filtered = (self.f_sampling/(8.0)*(-self.data_filtered[2:-2]-\
+        # perform 5-point difference
+        self._data_filtered = (self.f_sampling/(8.0)*(-self.data_filtered[2:-2]-\
         2*self.data_filtered[1:-3] + 2*self.data_filtered[3:-1] + self.data_filtered[4:]))**2
 
+        # moving average
         avg_window_size -= 1
-        self.data_filtered_avg = np.copy(self.data_filtered[avg_window_size:])
+        self.data_filtered_avg = np.copy(self._data_filtered[avg_window_size:])
         for i in range(avg_window_size):
-            self.data_filtered_avg += self.data_filtered[i:-avg_window_size+i]
+            self.data_filtered_avg += self._data_filtered[i:-avg_window_size+i]
 
         self.data_filtered_avg /= avg_window_size
-   
 
-
-x=Filter()
-x.filter_avg(20)
-pylab.subplot(2,1,1)
-pylab.plot(x.data[:3000])
-pylab.subplot(2,1,2)
-pylab.plot(x.data_filtered_avg[:3000])
-pylab.show()
