@@ -6,6 +6,7 @@ Assignment : 1- ECG detector
 """
 
 import numpy as np
+from scipy import signal
 import pylab
 
 
@@ -33,56 +34,39 @@ class Filter(object):
         self.f_sampling = f_sampling
         self.threshold = threshold
 
-    def filter_avg(self, avg_window_size):
+    def filter_avg(self, avg_window_size, notch_freq=50.0):
         """
         Performs all the filter function on the loaded data. The method will not
         perform the first two filtering stages [finite diff, square] if dont_filter==True
 
         ## Args
         + avg_window_size : the average window number of samples
+        + notch_freq : desired freq. to block by the notch filter
         """
-        self.data_filtered = (self.f_sampling/(8.0)*(-self.data[2:-2]- 2*self.data[1:-3]\
-        + 2*self.data[3:-1] + self.data[4:]))**2
+        #####################################################
+        ### NOTCH FILTER REGION
+        ### A built-in function implements the filter
+        w0 = notch_freq/(self.f_sampling/2)
+        b, a = signal.iirnotch(w0, 30.0)
+        self.data_filtered = signal.lfilter(b, a, self.data)
+        #####################################################
 
-        avg_window_size-=1
+        self.data_filtered = (self.f_sampling/(8.0)*(-self.data_filtered[2:-2]-\
+        2*self.data_filtered[1:-3] + 2*self.data_filtered[3:-1] + self.data_filtered[4:]))**2
+
+        avg_window_size -= 1
         self.data_filtered_avg = np.copy(self.data_filtered[avg_window_size:])
         for i in range(avg_window_size):
             self.data_filtered_avg += self.data_filtered[i:-avg_window_size+i]
 
-        self.data_filtered_avg/=avg_window_size
-    
+        self.data_filtered_avg /= avg_window_size
+   
 
 
 x=Filter()
-x.filter_avg(50)
+x.filter_avg(20)
 pylab.subplot(2,1,1)
-pylab.plot(x.data_filtered[:1500])
+pylab.plot(x.data[:3000])
 pylab.subplot(2,1,2)
-pylab.plot(x.data_filtered_avg[:1500])
+pylab.plot(x.data_filtered_avg[:3000])
 pylab.show()
-
-def running_mean(x, N):
-    cumsum = np.cumsum(np.insert(x, 0, 0)) 
-    return (cumsum[N:] - cumsum[:-N]) / float(N)
-
-DATA = np.loadtxt("DataN.txt")
-#DATA = running_mean(DATA,50)
-#pylab.plot(DATA[2000:])
-#pylab.show()
-# #pylab.plot(np.diff(DATA, 256))
-
-# pylab.subplot(2,1,1)
-# pylab.plot(DATA[:2000])
-
-# pylab.subplot(2,1,2)
-    # DATA = 256/(8.0)*(-DATA[2:-2] - 2*DATA[1:-3] + 2*DATA[3:-1] + DATA[4:])
-    # DATA = DATA**2
-
-    # pylab.subplot(2,1,2)
-    # DATA = running_mean(DATA,50)
-    # pylab.plot(DATA[:2000])
-    # pylab.show()
-
-# pylab.plot((DATA**2)[:2000])
-
-# pylab.show()
