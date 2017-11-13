@@ -106,5 +106,5 @@ class ECG_Filter(object):
         self.r_peaks[self.r_peaks == 0] = np.nan
         self.rr_interval = self.rr_interval[1:] - self.rr_interval[:-1]
         # msec scale
-        self.rr_interval *= (1e3)/self.f_sampling
+        self.rr_interval *= 1/self.f_sampling
 
