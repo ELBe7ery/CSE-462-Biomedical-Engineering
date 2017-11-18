@@ -2,7 +2,7 @@
 ## Name: Abdelrahman Mohamed Abdelhamid Ali Elbehery
 ## Section : 2
 ## ID : 1300759
----
+
 <!-- TOC -->
 ## Table of contents
 - [How to use](#how-to-use)
@@ -10,8 +10,8 @@
     - [Attributes](#attributes)
     - [Methods](#methods)
 - [Code features](#code-features)
-    - [The algorithms that i have implemented **from scratch** are](#the-algorithms-that-i-have-implemented-from-scratch-are)
-    - [The built-in algorithms used are](#the-built-in-algorithms-used-are)
+    - [Algorithms implemented **from scratch** are](#the-algorithms-that-i-have-implemented-from-scratch-are)
+    - [Built-in algorithms used](#the-built-in-algorithms-used-are)
 - [Algorithms details](#algorithms-details)
     - [5 Point difference algorithm](#5-point-difference-algorithm)
     - [Moving average](#moving-average)
