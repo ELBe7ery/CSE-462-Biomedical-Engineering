@@ -56,23 +56,20 @@ def question_1(point):
 
 
 #question_1(7)
-UUT = ECG_Filter('data_set/Data2.txt')
-# UUT.filter_avg(0)
-# pylab.subplot(2, 1, 1)
-# pylab.plot(UUT.data[:2000])
-# pylab.xlabel("Sample")
-# pylab.ylabel("Amplitude")
-# pylab.title("Before Filter", loc='left')
-# # plot After filter
-# pylab.subplot(2, 1, 2)
-# pylab.plot(UUT.data_filtered[:2000], color='red')
-# pylab.xlabel("Sample")
-# pylab.ylabel("Amplitude")
-# pylab.title("After Filter [Notch filter + BPF]", loc='left')
-# pylab.show()
+def question_2():
+    """
+    Solves Q-2 by outputing the proper results
+    """
+    UUT = ECG_Filter('data_set/Data2.txt')
+    N=25
+    UUT.filter_avg(N)
+    UUT.detect_sinusArrest()
 
+##### MAIN CODE
 
-UUT = ECG_Filter('data_set/Data2.txt')
-i=25
-UUT.filter_avg(i)
-UUT.detect_sinusArrest()
+# Solve each point @ question 1
+for i in [1, 2, 6, 7]:
+    question_1(i)
+
+# Solve question 2
+question_2()
