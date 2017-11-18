@@ -124,6 +124,7 @@ self.r_peaks = np.zeros([self.data_filtered_avg.shape[0],])
 
 The algorithm loops through the sampled data items and it moves by a step `avg_window_size`. The algorithm will always select the highest peak within the average window as the R-peak
 
+---
 ### Threshold value calculation
 ```py
 # threshold percentage 60%
@@ -156,6 +157,7 @@ for i in range(0, self.data_filtered_avg.shape[0], avg_window_size):
     self.r_peaks[past_max_idx] = past_val
 ```
 The algorithm iterates through the sampled data moving by window size, selects the current peak and stores its amplitude at `r_peaks`, note that this array does contain `numpy.nan` for the indices that does not have a peak.
+
 ---
 
 ## Deliverables and outputs
