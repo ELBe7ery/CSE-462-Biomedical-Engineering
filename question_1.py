@@ -19,11 +19,15 @@ def question_1(point):
         # plot before filter
         pylab.subplot(2, 1, 1)
         pylab.plot(UUT.data[:2000])
-        pylab.title("Before Filter")
+        pylab.xlabel("Sample")
+        pylab.ylabel("Amplitude")
+        pylab.title("Before Filter", loc='left')
         # plot After filter
         pylab.subplot(2, 1, 2)
         pylab.plot(UUT.data_filtered[:2000], color='red')
-        pylab.title("After Filter [Notch filter + BPF]")
+        pylab.xlabel("Sample")
+        pylab.ylabel("Amplitude")
+        pylab.title("After Filter [Notch filter + BPF]", loc='left')
         pylab.show()
 
     elif point == 2:
@@ -51,4 +55,24 @@ def question_1(point):
         pylab.show()
 
 
-question_1(7)
+#question_1(7)
+UUT = ECG_Filter('data_set/Data2.txt')
+# UUT.filter_avg(0)
+# pylab.subplot(2, 1, 1)
+# pylab.plot(UUT.data[:2000])
+# pylab.xlabel("Sample")
+# pylab.ylabel("Amplitude")
+# pylab.title("Before Filter", loc='left')
+# # plot After filter
+# pylab.subplot(2, 1, 2)
+# pylab.plot(UUT.data_filtered[:2000], color='red')
+# pylab.xlabel("Sample")
+# pylab.ylabel("Amplitude")
+# pylab.title("After Filter [Notch filter + BPF]", loc='left')
+# pylab.show()
+
+
+UUT = ECG_Filter('data_set/Data2.txt')
+i=25
+UUT.filter_avg(i)
+UUT.detect_sinusArrest()
