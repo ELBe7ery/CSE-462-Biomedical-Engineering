@@ -3,7 +3,34 @@
 ## Section : 2
 ## ID : 1300759
 ---
+<!-- TOC -->
+## Table of contents
+- [How to use](#how-to-use)
+- [Class diagram](#class-diagram)
+    - [Attributes](#attributes)
+    - [Methods](#methods)
+- [Code features](#code-features)
+    - [The algorithms that i have implemented **from scratch** are](#the-algorithms-that-i-have-implemented-from-scratch-are)
+    - [The built-in algorithms used are](#the-built-in-algorithms-used-are)
+- [Algorithms details](#algorithms-details)
+    - [5 Point difference algorithm](#5-point-difference-algorithm)
+    - [Moving average](#moving-average)
+    - [Threshold value calculation](#threshold-value-calculation)
+    - [R-peak detection](#r-peak-detection)
+- [Deliverables and outputs](#deliverables-and-outputs)
+    - [Problem 1](#problem-1)
+        - [Before_After_Filter.jpg](#before_after_filterjpg)
+        - [DetectedR_5.jpg](#detectedr_5jpg)
+        - [DetectedR_15.jpg](#detectedr_15jpg)
+        - [DetectedR_25.jpg](#detectedr_25jpg)
+        - [What can you conclude about the optimal setting of N?](#what-can-you-conclude-about-the-optimal-setting-of-n)
+        - [Unfiltered_25.jpg](#unfiltered_25jpg)
+        - [RR.jpg](#rrjpg)
+    - [Problem 2](#problem-2)
+        - [MissingBeats.txt](#missingbeatstxt)
+- [References](#references)
 
+<!-- /TOC -->
 ## How to use
 + You need a `python 2.7 interpreter`
 + From terminal type `python code.py`
