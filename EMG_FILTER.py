@@ -6,35 +6,37 @@ Assignment : 1- ECG detector
 """
 
 import numpy as np
-from scipy import signal
 
 
-class EMG_Filter(object):
+class EMGFilter(object):
     """
-    A class implementing the EMG filter. The filter performs
-    + Notch filter to remove the power-line noise followed by a BPF
-    + A 5 point difference to check large slope regions
-    + Then square the difference array to poroduce positive samples
+    A class implementing the EMG filter. The filter performs the following sequence of operations
+    + Rectifying the signal by removing -ve samples [absolute operation]
     + Then an average window algorithm is applied to the samples for a smoother curve
-    + A threshold is assigned to capture the QRS [the R peak]
+    + A threshold is assigned to capture the peaks to detect MUAPs
+    + The matching algorithm is invoked to capture the repeated templates of MUAPs
 
     ## Attributes
-    + data : np.array that containts the sampled ECG data, exist only for visualization
+    + data : np.array that containts the sampled ECG data,
+    exist only for visualization and debugging
     + data_filtered_avg : np.array that contains the sampled filtered data after applying
     moving window with size N
-    + r_peaks : np.array that contains the peak indeces of the ECG [R portion]
-    + time_stamp : np.array that contains the time of each R peak
+    + r_peaks : np.array that contains the peak indeces of the EMG
+    + r_peaks_idx : np.array that contains the index number of each peak
+    + template_matrix : numpy 2d array where each row represent a detected template
+    a vectorized difference operation is done over this array to match other templates
+    + template_count : a numpy 1D array that holds the number of occurrences of each template.
+    This attribute is used to check if such a template is being repeated often or
+    it is a superposition. Also a zero value means we dont have to draw such patteren
     + threshold : an autmatically generated value used as the signal threshold to detect peaks
 
 
     ### The features implemented are
     + Moving average technique with N as an argument
-    + Threshold value calculation
     + R-peak detection algorithm
 
     ## Args
     + file_name : the file name containing the ECG samples
-    + f_sampling : the sampling frequency
     """
 
     def __init__(self, file_name="Data.txt"):
@@ -43,14 +45,27 @@ class EMG_Filter(object):
         self._data_filtered = None
         self.r_peaks = None
         self.threshold = None
+        self.r_peaks_idx = None
+        self.template_matrix = None
+        self.template_count = None
 
     def filter_avg(self, avg_window_size, threshold):
         """
-        Performs all the filter function on the loaded data. The method will not
-        perform the first two filtering stages [finite diff, square] if dont_filter==True
+        Attempts to rectify the signal and perform the vectorized moving average algorithm
+        followed by the peak detection algorithm.
+        The method exists only for debugging and visualization, the user should use
+        the get_templates() interface that will automatically invoke this method
+        to do the proper pre-processing for the template matching algorithm
+
+        The method mutates the following attributes
+        + _data_filtered : an internal variable that has the rectified data
+        + data_filtered_avg : the data after the moving average algorithm
+        + r_peaks : an array of non-zero values at the peak indices
+        + r_peaks_idx : an array of the indices of the peaks detected
 
         ## Args
         + avg_window_size : the average window number of samples
+        + threshold : threshold for peak detection algorithm @ the moving average.
         """
 
         # perform absolute rectification
@@ -74,12 +89,60 @@ class EMG_Filter(object):
                 past_max_idx = 0
             val = self.data_filtered_avg[max_idx]
             past_val = self.r_peaks[past_max_idx]
-            val = val * (val > self.threshold) * (val > past_val)
+            # only compare it to the past value, as long as it exists distance > T
+            val = val * (val > self.threshold) *\
+            (val > past_val or (max_idx - past_max_idx) > avg_window_size)
             past_val = past_val * (past_val > val)
             self.r_peaks[max_idx] = val
             self.r_peaks[past_max_idx] = past_val
-        #self.rr_interval = np.nonzero(self.r_peaks)[0].astype('float')
-        #self.time_stamp = self.rr_interval#*1/self.f_sampling
-        # dont show zeros
+        self.r_peaks_idx = np.nonzero(self.r_peaks)[0]#.astype('float')
+        # dont show zeros, useful for plotting
         self.r_peaks[self.r_peaks == 0] = np.nan
-        
+
+
+    def match_templates(self, avg_window_size=20, threshold=11.7, diff_th=12.65):
+        """
+        Capture the different templates of the MUAPs, in case a template is repeated for one or two
+        times only the algorithm considers it as a superposition happened between multiple MUAPs.
+        It will still be shown, but is labled by "superposition"
+
+        ## Algorithm
+        The function relies heavily on the vectorized matrix operations provided by numpy.
+        Since it does the difference across all the matrix elements by broadcasting the last
+        captured template. The resulted value is a vector of distances, the argmax of this distance
+        is considered the winning template. Once this winning template is known and is updated
+        to the last captured template
+
+        ## Arguments
+        + avg_window_size : the average window number of samples
+        + threshold : threshold for peak detection algorithm @ the moving average. **Note**
+        at this point, the theshold is calculated manually by inspecting the signal
+        + diff_th : difference threshold for template matching
+        """
+        # filter the data, obtain the peak indices
+        self.filter_avg(avg_window_size, threshold)
+        # now create the template matrix with a total number of templates = total number of peaks
+        # this might not hold true, since many of these peaks are repeated. But we are allocating
+        # an upper bound size for this numpy array
+        self.template_matrix = np.zeros([self.r_peaks_idx.shape[0], avg_window_size])
+        self.template_count = np.zeros([self.r_peaks_idx[0]])
+        next_temp_pos = 0
+        # now loop through all the detected peaks, and compate it [vector difference] against
+        # all the detected templates
+        for t_idx in self.r_peaks_idx:
+            dist = int(avg_window_size//2)
+            template = self.data_filtered_avg[t_idx-dist:t_idx+dist]
+            dist_vect = np.linalg.norm(self.template_matrix - template, axis=1) < diff_th
+            win_idx = np.argmax(dist_vect)
+            if dist_vect[win_idx] == 0:
+                # None of the templates matched this one, add it into the template matrix
+                self.template_matrix[next_temp_pos, :] = template
+                # Now declare that we have found one instance of such template
+                self.template_count[next_temp_pos] = 1
+                # increment the next position pointer
+                next_temp_pos += 1
+                continue
+            # we have found a winner, increment the number of occurrences
+            self.template_count[win_idx] += 1
+            # then update this template to be the new one [SLIDE 13]
+            self.template_matrix[win_idx, :] = template

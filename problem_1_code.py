@@ -5,14 +5,17 @@
 """
 import numpy as np
 import pylab
+from EMG_FILTER import EMGFilter
 
 
-from EMG_FILTER import EMG_Filter
 
-MY_FILTER = EMG_Filter()
-THRESHOLD = 3*np.std(np.abs(MY_FILTER.data[500:800]))
+F = EMGFilter()
+# noise is chosen visually from the graph
+TH = 3*np.std(np.abs(F.data[500:800]))
 
-MY_FILTER.filter_avg(20, THRESHOLD)
-pylab.plot(MY_FILTER.data_filtered_avg[30000:35000])
-pylab.plot(MY_FILTER.r_peaks[30000:35000], '*')
+
+#F.filter_avg(20, TH)
+# pylab.plot(F.data_filtered_avg[30000:35000])
+# pylab.plot(F.r_peaks[30000:35000], '*')
+F.match_templates(threshold=TH)
 pylab.show()
