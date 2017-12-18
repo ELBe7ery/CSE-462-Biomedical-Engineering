@@ -6,7 +6,7 @@ Assignment : 1- ECG detector
 """
 
 import numpy as np
-
+import pylab
 
 class EMGFilter(object):
     """
@@ -100,7 +100,7 @@ class EMGFilter(object):
         self.r_peaks[self.r_peaks == 0] = np.nan
 
 
-    def match_templates(self, avg_window_size=20, threshold=11.7, diff_th=12.65):
+    def match_templates(self, avg_window_size=20, threshold=11.7, diff_th=12.65**5, r_low=30000, r_high=35000):
         """
         Capture the different templates of the MUAPs, in case a template is repeated for one or two
         times only the algorithm considers it as a superposition happened between multiple MUAPs.
@@ -125,19 +125,24 @@ class EMGFilter(object):
         # this might not hold true, since many of these peaks are repeated. But we are allocating
         # an upper bound size for this numpy array
         self.template_matrix = np.zeros([self.r_peaks_idx.shape[0], avg_window_size])
-        self.template_count = np.zeros([self.r_peaks_idx[0]])
+        self.template_count = np.zeros([self.r_peaks_idx.shape[0]]).astype('int32')
         next_temp_pos = 0
         # now loop through all the detected peaks, and compate it [vector difference] against
         # all the detected templates
         for t_idx in self.r_peaks_idx:
+            # if t_idx > r_high or t_idx < r_low:
+            #     continue
             dist = int(avg_window_size//2)
             template = self.data_filtered_avg[t_idx-dist:t_idx+dist]
-            dist_vect = np.linalg.norm(self.template_matrix - template, axis=1) < diff_th
+            #dist_vect = np.linalg.norm(self.template_matrix - template, axis=1) < diff_th
+            dist_vect = np.sum((self.template_matrix - template)**2, axis=1) < diff_th
             win_idx = np.argmax(dist_vect)
             if dist_vect[win_idx] == 0:
                 # None of the templates matched this one, add it into the template matrix
                 self.template_matrix[next_temp_pos, :] = template
                 # Now declare that we have found one instance of such template
+                if next_temp_pos == 123:
+                    pass
                 self.template_count[next_temp_pos] = 1
                 # increment the next position pointer
                 next_temp_pos += 1
@@ -146,3 +151,19 @@ class EMGFilter(object):
             self.template_count[win_idx] += 1
             # then update this template to be the new one [SLIDE 13]
             self.template_matrix[win_idx, :] = template
+
+    def plot_templates(self, num_fig_h=4):
+        """
+        Plots all the detected patterns using pylab
+
+        ## Args
+        + num_fig_h : the number of figures to draw horizontaly
+        """
+        idxs = np.nonzero(self.template_count > 0)[0]
+        sub_plot_x = idxs.shape[0]//num_fig_h
+        sub_plot_y = num_fig_h
+
+        for i in range(len(idxs)):
+            pylab.subplot(sub_plot_x+1, sub_plot_y, i+1)
+            pylab.plot(self.template_matrix[idxs[i]])
+        pylab.show()
