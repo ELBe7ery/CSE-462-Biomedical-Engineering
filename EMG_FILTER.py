@@ -43,9 +43,10 @@ class EMGFilter(object):
         self.data = np.loadtxt(file_name)
         self.data_filtered_avg = None
         self._data_filtered = None
-        self.r_peaks = None
         self.threshold = None
+        self.r_peaks = None
         self.r_peaks_idx = None
+        self.r_peaks_clrs = None
         self.template_matrix = None
         self.template_count = None
 
@@ -100,7 +101,7 @@ class EMGFilter(object):
         self.r_peaks[self.r_peaks == 0] = np.nan
 
 
-    def match_templates(self, avg_window_size=20, threshold=11.7, diff_th=12.65**5, r_low=None, r_high=None):
+    def match_templates(self, avg_window_size=20, threshold=11.7, diff_th=12.65**5):
         """
         Capture the different templates of the MUAPs, in case a template is repeated for one or two
         times only the algorithm considers it as a superposition happened between multiple MUAPs.
@@ -126,29 +127,33 @@ class EMGFilter(object):
         # an upper bound size for this numpy array
         self.template_matrix = np.zeros([self.r_peaks_idx.shape[0], avg_window_size])
         self.template_count = np.zeros([self.r_peaks_idx.shape[0]]).astype('int32')
+        self.r_peaks_clrs = np.zeros([self.r_peaks_idx.shape[0], 3])
         next_temp_pos = 0
         # now loop through all the detected peaks, and compate it [vector difference] against
         # all the detected templates
-        for t_idx in self.r_peaks_idx:
-            if (r_low != None and r_high != None) and (t_idx > r_high or t_idx < r_low):
-                continue
+        for p_idx, t_idx in enumerate(self.r_peaks_idx):
             dist = int(avg_window_size//2)
             template = self.data_filtered_avg[t_idx-dist:t_idx+dist]
             #dist_vect = np.linalg.norm(self.template_matrix - template, axis=1) < diff_th
             dist_vect = np.sum((self.template_matrix - template)**2, axis=1) < diff_th
             win_idx = np.argmax(dist_vect)
-            if dist_vect[win_idx] == 0:
+            # if t_idx==30299 or t_idx==30688:
+            #     pass
+            if dist_vect[win_idx] == 0 or self.template_count[win_idx] == 0:
                 # None of the templates matched this one, add it into the template matrix
                 self.template_matrix[next_temp_pos, :] = template
                 # Now declare that we have found one instance of such template
-                if next_temp_pos == 123:
-                    pass
                 self.template_count[next_temp_pos] = 1
+                # assign some random color to these group of points
+                clr = np.random.random(3)
+                self.r_peaks_clrs[win_idx, :] = clr
+                self.r_peaks_clrs[p_idx, :] = clr
                 # increment the next position pointer
                 next_temp_pos += 1
                 continue
             # we have found a winner, increment the number of occurrences
             self.template_count[win_idx] += 1
+            self.r_peaks_clrs[p_idx, :] = self.r_peaks_clrs[win_idx, :]
             # then update this template to be the new one [SLIDE 13]
             self.template_matrix[win_idx, :] = template
 
@@ -167,4 +172,20 @@ class EMGFilter(object):
             pylab.subplot(sub_plot_x, sub_plot_y, i+1)
             pylab.plot(self.template_matrix[idxs[i]])
             pylab.title("Template repeated: "+ str(self.template_count[idxs[i]])+ " times", loc='left')
+        pylab.show()
+
+    def plot_peaks(self, r_low=0, r_high=0):
+        """
+        Plots all the detected peaks while maintaining the same color
+        for the peaks that belong to the same template
+        """
+        if (r_low != 0 and r_high != 0):
+            pylab.plot(self.data_filtered_avg[r_low:r_high])
+        else:
+            pylab.plot(self.data_filtered_avg)
+
+        for i, p_idx in enumerate(self.r_peaks_idx):
+            if (r_low != 0 and r_high != 0) and (p_idx > r_high or p_idx < r_low):
+                continue
+            pylab.plot(p_idx-r_low, self.r_peaks[p_idx], '*',c=self.r_peaks_clrs[i])
         pylab.show()
