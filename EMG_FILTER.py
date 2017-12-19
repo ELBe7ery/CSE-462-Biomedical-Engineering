@@ -100,7 +100,7 @@ class EMGFilter(object):
         self.r_peaks[self.r_peaks == 0] = np.nan
 
 
-    def match_templates(self, avg_window_size=20, threshold=11.7, diff_th=12.65**5, r_low=30000, r_high=35000):
+    def match_templates(self, avg_window_size=20, threshold=11.7, diff_th=12.65**5, r_low=None, r_high=None):
         """
         Capture the different templates of the MUAPs, in case a template is repeated for one or two
         times only the algorithm considers it as a superposition happened between multiple MUAPs.
@@ -130,8 +130,8 @@ class EMGFilter(object):
         # now loop through all the detected peaks, and compate it [vector difference] against
         # all the detected templates
         for t_idx in self.r_peaks_idx:
-            # if t_idx > r_high or t_idx < r_low:
-            #     continue
+            if (r_low != None and r_high != None) and (t_idx > r_high or t_idx < r_low):
+                continue
             dist = int(avg_window_size//2)
             template = self.data_filtered_avg[t_idx-dist:t_idx+dist]
             #dist_vect = np.linalg.norm(self.template_matrix - template, axis=1) < diff_th
@@ -164,6 +164,7 @@ class EMGFilter(object):
         sub_plot_y = num_fig_h
 
         for i in range(len(idxs)):
-            pylab.subplot(sub_plot_x+1, sub_plot_y, i+1)
+            pylab.subplot(sub_plot_x, sub_plot_y, i+1)
             pylab.plot(self.template_matrix[idxs[i]])
+            pylab.title("Template repeated: "+ str(self.template_count[idxs[i]])+ " times", loc='left')
         pylab.show()
