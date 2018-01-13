@@ -3,10 +3,16 @@ Name : Abdelrahman Elbehery
 Section : 2
 ID : 1300759
 Assignment : 1- ECG detector
+
+## Dependencies
++ numpy
++ pylab
++ sklearn
 """
 
 import numpy as np
 import pylab
+from sklearn.cluster import KMeans
 
 class EMGFilter(object):
     """
@@ -103,6 +109,13 @@ class EMGFilter(object):
         # dont show zeros, useful for plotting
         self.r_peaks[self.r_peaks == 0] = np.nan
 
+        # now create the template matrix with a total number of templates = total number of peaks
+        # this might not hold true, since many of these peaks are repeated. But we are allocating
+        # an upper bound size for this numpy array, keep in mind, we decremented avg_window_size earlier
+        self.template_matrix = np.zeros([self.r_peaks_idx.shape[0], avg_window_size+1])
+        self.template_count = np.zeros([self.r_peaks_idx.shape[0]]).astype('int32')
+        self.r_peaks_clrs = np.zeros([self.r_peaks_idx.shape[0], 3])
+
 
     def match_templates(self, avg_window_size=20, threshold=11.7, diff_th=12.65**5):
         """
@@ -125,17 +138,11 @@ class EMGFilter(object):
         """
         # filter the data, obtain the peak indices
         self.filter_avg(avg_window_size, threshold)
-        # now create the template matrix with a total number of templates = total number of peaks
-        # this might not hold true, since many of these peaks are repeated. But we are allocating
-        # an upper bound size for this numpy array
-        self.template_matrix = np.zeros([self.r_peaks_idx.shape[0], avg_window_size])
-        self.template_count = np.zeros([self.r_peaks_idx.shape[0]]).astype('int32')
-        self.r_peaks_clrs = np.zeros([self.r_peaks_idx.shape[0], 3])
         next_temp_pos = 0
         # now loop through all the detected peaks, and compate it [vector difference] against
         # all the detected templates
+        dist = int(avg_window_size//2)
         for p_idx, t_idx in enumerate(self.r_peaks_idx):
-            dist = int(avg_window_size//2)
             template = self.data_filtered_avg[t_idx-dist:t_idx+dist]
             #dist_vect = np.linalg.norm(self.template_matrix - template, axis=1) < diff_th
             dist_vect = np.sum((self.template_matrix - template)**2, axis=1) < diff_th
@@ -159,6 +166,50 @@ class EMGFilter(object):
             self.r_peaks_clrs[p_idx, :] = self.r_peaks_clrs[win_idx, :]
             # then update this template to be the new one [SLIDE 13]
             self.template_matrix[win_idx, :] = template
+
+    def match_templates_kmeans(self, avg_window_size=20, threshold=11.7, num_clusters=2):
+        """
+        Calculates the centers of the MUAPs by the k-means clustering method
+
+        ## Algorithm
+        + The code is using scikit learn kmeans classifier in order to obtain the n_clusters
+        centers of the data_set
+        + The data_set is considered to be a matrix of rows = number of peaks detecter and
+        coloumns = number of features [which is in ourcase is the avg_window_size]
+        + Note the data_set is all the templtes we have seen in our EMG [at this point this is not
+        considered to be an attribute since no other method is using it nor it is required to draw]
+        + once the centers of the clusters are detected [and the lables of each item
+        in the data_set] the matrix `self.template_count` is updated and a color
+        for each template is given randomly
+        + after this, the `self.template_matrix` is given the detected centers
+        of the kmeans classifier
+        since these are the `n_clusters` distinct templates that we have detected
+
+        ## Arguments
+        + avg_window_size : the moving average window size for filtring stage
+        + threshold : the threshold for detecting the peaks for filtring stage
+        + num_clusters : the number of clusters/centers
+        """
+        # do the filteration stage
+        self.filter_avg(avg_window_size, threshold)
+        data_set = np.zeros([self.r_peaks_idx.shape[0], avg_window_size])
+        # now collect all the detected peaks, and sync them to obtain an MUAP template
+        dist = int(avg_window_size//2)
+        for p_idx, t_idx in enumerate(self.r_peaks_idx):
+            # build the data-set
+            data_set[p_idx, :] = self.data_filtered_avg[t_idx-dist:t_idx+dist]
+        # get the kmeans object after fitting the dataset 
+        kmeans = KMeans(n_clusters=num_clusters).fit(data_set)
+        # now we need to get the lables of the items in the data-set
+        u,c = np.unique(kmeans.labels_, return_counts=1)
+        self.template_count[u]=c
+        # now these are the detected templates [centers]
+        self.template_matrix = kmeans.cluster_centers_
+        # now we need a random matrix [for the colors] a row for each cluster
+        # and number of cols = 3 [r, g, b]
+        clrs = np.random.random([u.shape[0],3])
+        # now assign to each peak a color [used for plotting only]
+        self.r_peaks_clrs = clrs[kmeans.labels_]
 
     def plot_templates(self, num_fig_h=4):
         """
