@@ -55,6 +55,7 @@ class EMGFilter(object):
         self.r_peaks_clrs = None
         self.template_matrix = None
         self.template_count = None
+        self.kmeans = None
 
     def filter_avg(self, avg_window_size, threshold):
         """
@@ -198,20 +199,22 @@ class EMGFilter(object):
         for p_idx, t_idx in enumerate(self.r_peaks_idx):
             # build the data-set
             data_set[p_idx, :] = self.data_filtered_avg[t_idx-dist:t_idx+dist]
-        # get the kmeans object after fitting the dataset 
-        kmeans = KMeans(n_clusters=num_clusters).fit(data_set)
+        # get the kmeans object after fitting the dataset
+        self.kmeans = KMeans(n_clusters=num_clusters).fit(data_set)
         # now we need to get the lables of the items in the data-set
-        u,c = np.unique(kmeans.labels_, return_counts=1)
-        self.template_count[u]=c
+        u,c = np.unique(self.kmeans.labels_, return_counts=1)
+        self.template_count[u] = c
         # now these are the detected templates [centers]
-        self.template_matrix = kmeans.cluster_centers_
+        self.template_matrix = self.kmeans.cluster_centers_
         # now we need a random matrix [for the colors] a row for each cluster
         # and number of cols = 3 [r, g, b]
         clrs = np.random.random([u.shape[0],3])
         # now assign to each peak a color [used for plotting only]
-        self.r_peaks_clrs = clrs[kmeans.labels_]
+        self.r_peaks_clrs = clrs[self.kmeans.labels_]
+        # ONLY FOR VISUALIZATION PURPOSES
+        self.dataset = data_set
 
-    def plot_templates(self, num_fig_h=4):
+    def plot_templates(self, num_fig_h=4, _doc=0, r_low=0, r_high=0):
         """
         Plots all the detected patterns using pylab
 
@@ -221,10 +224,26 @@ class EMGFilter(object):
         idxs = np.nonzero(self.template_count > 0)[0]
         sub_plot_x = idxs.shape[0]//num_fig_h
         sub_plot_y = num_fig_h
+        _mc = np.zeros_like(idxs)
+        lw = 1
+        if _doc:
+            lw = 7
+        if _doc:
+            for i in range(len(self.kmeans.labels_)):
+                pylab.subplot(sub_plot_x, sub_plot_y, self.kmeans.labels_[i]+1)
+                if self.r_peaks_idx[i] < r_low or self.r_peaks_idx[i] > r_high:
+                    continue
+                if _mc[self.kmeans.labels_[i]] == 0:
+                    pylab.plot(self.dataset[i], 'b', label='MUAP belonging to this template')
+                    _mc[self.kmeans.labels_[i]] = 1
+                else:
+                    pylab.plot(self.dataset[i], 'b')
+                #pylab.legend(loc='upper right')
 
         for i in range(len(idxs)):
             pylab.subplot(sub_plot_x, sub_plot_y, i+1)
-            pylab.plot(self.template_matrix[idxs[i]])
+            pylab.plot(self.template_matrix[idxs[i]], 'r', label='Template Detected', linewidth=lw)
+            pylab.legend(loc='upper right')
             pylab.title("Template repeated: "+ str(self.template_count[idxs[i]])+ " times", loc='left')
         pylab.show()
 
