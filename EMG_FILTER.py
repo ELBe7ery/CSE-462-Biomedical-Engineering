@@ -60,8 +60,11 @@ class EMGFilter(object):
 
         The method mutates the following attributes
         + _data_filtered : an internal variable that has the rectified data
+        it is kept as an attribute for vizualization otherwise should be made a local variable
+        within this method scope since no other method is using it
         + data_filtered_avg : the data after the moving average algorithm
-        + r_peaks : an array of non-zero values at the peak indices
+        + r_peaks : an array of non-zero values at the peak indices, used for plotting
+        only, noitce that indices with no peaks will have np.nan to make pylab avoid plotting them
         + r_peaks_idx : an array of the indices of the peaks detected
 
         ## Args
@@ -162,7 +165,7 @@ class EMGFilter(object):
         Plots all the detected patterns using pylab
 
         ## Args
-        + num_fig_h : the number of figures to draw horizontaly
+        + num_fig_h : the number of figures to draw horizontally
         """
         idxs = np.nonzero(self.template_count > 0)[0]
         sub_plot_x = idxs.shape[0]//num_fig_h
