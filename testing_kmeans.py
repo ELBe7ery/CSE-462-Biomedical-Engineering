@@ -8,7 +8,7 @@ import pylab
 np.random.seed(12)
 UUT = EMGFilter()
 # noise is chosen visually from the graph
-TH = 3*np.std(np.abs(UUT.data[500:800]))
+TH = 2000 #3*np.std(np.abs(UUT.data[500:800]))
 UUT.match_templates_kmeans(threshold=TH, num_clusters=2, low=30000, high=35000)
 UUT.plot_templates(2, 1, r_low=30000, r_high=35000)
 UUT.plot_peaks(r_low=30000, r_high=35000)
