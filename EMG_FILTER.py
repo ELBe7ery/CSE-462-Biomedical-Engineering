@@ -94,6 +94,7 @@ class EMGFilter(object):
         ## peak detection
         i = 0
         avg_window_size += 1
+        last_max_idx = -1
         while (i < self.data_filtered_avg.shape[0]):
             max_idx = np.argmax(self.data_filtered_avg[i:i+avg_window_size]>self.threshold)+i
             val = self.data_filtered_avg[max_idx]
@@ -101,9 +102,16 @@ class EMGFilter(object):
                 # no peaks at this avg window, skip it
                 i += avg_window_size
                 continue
+            if (max_idx == 32456):
+                xx = 1
             # skip a window
             i = max_idx+avg_window_size
             max_idx = np.argmax(self.data[max_idx:max_idx+avg_window_size])+max_idx
+            if max_idx < last_max_idx+avg_window_size:
+                if self.data[max_idx] > self.data[last_max_idx]:
+                    self.r_peaks[last_max_idx] = 0
+                #self.r_peaks[i] = self.data[i]
+            last_max_idx = max_idx
             self.r_peaks[max_idx] = self.data[max_idx]
         avg_window_size -= 1
 
