@@ -57,7 +57,7 @@ class EMGFilter(object):
         self.template_count = None
         self.kmeans = None
 
-    def filter_avg(self, avg_window_size, threshold):
+    def filter_avg(self, avg_window_size, threshold, low=0, high=-1):
         """
         Attempts to rectify the signal and perform the vectorized moving average algorithm
         followed by the peak detection algorithm.
@@ -81,31 +81,33 @@ class EMGFilter(object):
 
         # perform absolute rectification
         self._data_filtered = np.abs(self.data)
-
+        if high == -1:
+            high = self.data.size
         # moving average
         avg_window_size -= 1
         self.data_filtered_avg = np.copy(self._data_filtered[avg_window_size:])
         for i in range(avg_window_size):
             self.data_filtered_avg += self._data_filtered[i:-avg_window_size+i]
         self.data_filtered_avg /= avg_window_size
-
         self.r_peaks = np.zeros([self.data_filtered_avg.shape[0],])
         self.threshold = threshold
         ## peak detection
-        for i in range(0, self.data_filtered_avg.shape[0], avg_window_size):
-            max_idx = np.argmax(self.data_filtered_avg[i:i+avg_window_size])+i
-            if i >= avg_window_size:
-                past_max_idx = np.argmax(self.r_peaks[i-avg_window_size:i])+(i-avg_window_size)
-            else:
-                past_max_idx = 0
+        i = 0
+        avg_window_size += 1
+        while (i < self.data_filtered_avg.shape[0]):
+            max_idx = np.argmax(self.data_filtered_avg[i:i+avg_window_size]>self.threshold)+i
             val = self.data_filtered_avg[max_idx]
-            past_val = self.r_peaks[past_max_idx]
-            # only compare it to the past value, as long as it exists distance > T
-            val = val * (val > self.threshold) *\
-            (val > past_val or (max_idx - past_max_idx) > avg_window_size)
-            past_val = past_val * (past_val > val)
-            self.r_peaks[max_idx] = val
-            self.r_peaks[past_max_idx] = past_val
+            if val <= self.threshold or i < low or i > high:
+                # no peaks at this avg window, skip it
+                i += avg_window_size
+                continue
+            # skip a window
+            i = max_idx+avg_window_size
+            max_idx = np.argmax(self.data[max_idx:max_idx+avg_window_size])+max_idx
+            self.r_peaks[max_idx] = self.data[max_idx]
+        avg_window_size -= 1
+
+
         self.r_peaks_idx = np.nonzero(self.r_peaks)[0]#.astype('float')
         # dont show zeros, useful for plotting
         self.r_peaks[self.r_peaks == 0] = np.nan
@@ -118,7 +120,7 @@ class EMGFilter(object):
         self.r_peaks_clrs = np.zeros([self.r_peaks_idx.shape[0], 3])
 
 
-    def match_templates(self, avg_window_size=20, threshold=11.7, diff_th=12.65**5):
+    def match_templates(self, avg_window_size=20, threshold=11.7, diff_th=12.65**5, low=0, high=-1):
         """
         Capture the different templates of the MUAPs, in case a template is repeated for one or two
         times only the algorithm considers it as a superposition happened between multiple MUAPs.
@@ -138,18 +140,20 @@ class EMGFilter(object):
         + diff_th : difference threshold for template matching
         """
         # filter the data, obtain the peak indices
-        self.filter_avg(avg_window_size, threshold)
+        self.filter_avg(avg_window_size, threshold, low, high)
         next_temp_pos = 0
+        if high == -1:
+            high = self.data.size
         # now loop through all the detected peaks, and compate it [vector difference] against
         # all the detected templates
         dist = int(avg_window_size//2)
+        _last_winner = []
         for p_idx, t_idx in enumerate(self.r_peaks_idx):
-            template = self.data_filtered_avg[t_idx-dist:t_idx+dist]
-            #dist_vect = np.linalg.norm(self.template_matrix - template, axis=1) < diff_th
+            if t_idx < low or t_idx > high:
+                continue
+            template = self.data[t_idx-dist:t_idx+dist]
             dist_vect = np.sum((self.template_matrix - template)**2, axis=1) < diff_th
             win_idx = np.argmax(dist_vect)
-            # if t_idx==30299 or t_idx==30688:
-            #     pass
             if dist_vect[win_idx] == 0 or self.template_count[win_idx] == 0:
                 # None of the templates matched this one, add it into the template matrix
                 self.template_matrix[next_temp_pos, :] = template
@@ -157,14 +161,14 @@ class EMGFilter(object):
                 self.template_count[next_temp_pos] = 1
                 # assign some random color to these group of points
                 clr = np.random.random(3)
-                self.r_peaks_clrs[win_idx, :] = clr
                 self.r_peaks_clrs[p_idx, :] = clr
                 # increment the next position pointer
                 next_temp_pos += 1
+                _last_winner.append(clr)
                 continue
             # we have found a winner, increment the number of occurrences
             self.template_count[win_idx] += 1
-            self.r_peaks_clrs[p_idx, :] = self.r_peaks_clrs[win_idx, :]
+            self.r_peaks_clrs[p_idx, :] = _last_winner[win_idx]#self.r_peaks_clrs[win_idx, :]
             # then update this template to be the new one [SLIDE 13]
             self.template_matrix[win_idx, :] = template
 
@@ -253,9 +257,9 @@ class EMGFilter(object):
         for the peaks that belong to the same template
         """
         if (r_low != 0 and r_high != 0):
-            pylab.plot(self.data_filtered_avg[r_low:r_high])
+            pylab.plot(self.data[r_low:r_high])#self.data_filtered_avg[r_low:r_high])
         else:
-            pylab.plot(self.data_filtered_avg)
+            pylab.plot(self.data)#self.data_filtered_avg)
 
         for i, p_idx in enumerate(self.r_peaks_idx):
             if (r_low != 0 and r_high != 0) and (p_idx > r_high or p_idx < r_low):
