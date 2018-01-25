@@ -34,11 +34,11 @@ class EMGFilter(object):
     + template_count : a numpy 1D array that holds the number of occurrences of each template.
     This attribute is used to check if such a template is being repeated often or
     it is a superposition. Also a zero value means we dont have to draw such patteren
-    + threshold : an autmatically generated value used as the signal threshold to detect peaks
+    + threshold : User given TH for detecting rectified EMG signal peaks
 
 
     ### The features implemented are
-    + Moving average technique with N as an argument
+    + ~~Moving average technique with N as an argument~~ k-means built around the sklearn
     + R-peak detection algorithm
 
     ## Args
