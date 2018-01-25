@@ -102,15 +102,12 @@ class EMGFilter(object):
                 # no peaks at this avg window, skip it
                 i += avg_window_size
                 continue
-            if (max_idx == 32456):
-                xx = 1
             # skip a window
             i = max_idx+avg_window_size
             max_idx = np.argmax(self.data[max_idx:max_idx+avg_window_size])+max_idx
-            if max_idx < last_max_idx+avg_window_size:
+            if max_idx <= last_max_idx+avg_window_size+1:
                 if self.data[max_idx] > self.data[last_max_idx]:
                     self.r_peaks[last_max_idx] = 0
-                #self.r_peaks[i] = self.data[i]
             last_max_idx = max_idx
             self.r_peaks[max_idx] = self.data[max_idx]
         avg_window_size -= 1
@@ -245,11 +242,11 @@ class EMGFilter(object):
                 pylab.subplot(sub_plot_x, sub_plot_y, self.kmeans.labels_[i]+1)
                 if self.r_peaks_idx[i] < r_low or self.r_peaks_idx[i] > r_high:
                     continue
-                if _mc[self.kmeans.labels_[i]] == 0:
-                    pylab.plot(self.dataset[i], 'b', label='MUAP belonging to this template')
-                    _mc[self.kmeans.labels_[i]] = 1
-                else:
-                    pylab.plot(self.dataset[i], 'b')
+                # if _mc[self.kmeans.labels_[i]] == 0:
+                #     pylab.plot(self.dataset[i], 'b', label='MUAP belonging to this template')
+                #     _mc[self.kmeans.labels_[i]] = 1
+                # else:
+                #     pylab.plot(self.dataset[i], 'b')
                 #pylab.legend(loc='upper right')
 
         for i in range(len(idxs)):
