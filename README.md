@@ -4,7 +4,24 @@
 ## ID : 1300759
 ## Table of contents
 
+<!-- TOC -->
+- [How to use](#how-to-use)
+- [Class diagram](#class-diagram)
+- [Methods](#methods)
+- [Algorithms details](#algorithms-details)
+    - [Template matching [Non-kmeans]](#template-matching-non-kmeans)
+    - [Template matching [Kmeans based]](#template-matching-kmeans-based)
+    - [Moving average](#moving-average)
+- [Deliverables and outputs](#deliverables-and-outputs)
+    - [Problem 1](#problem-1)
+        - [DetectedMUAP.jpg](#detectedmuapjpg)
+        - [Templates.jpg](#templatesjpg)
+    - [Problem 2](#problem-2)
+        - [DetectedMUAP_K.jpg](#detectedmuap_kjpg)
+        - [Templates_K.jpg](#templates_kjpg)
+- [Observations](#observations)
 
+<!-- /TOC -->
 ## How to use
 + You need a `python 2.7 interpreter`
 + From terminal type `python code.py`
@@ -46,7 +63,7 @@ it is a superposition. Also a zero value means we dont have to draw such pattere
 ## Algorithms details
 
 
-### Template matching \[Non-kmeans\]
+### Template matching [Non-kmeans]
 
 ```py
 # synchronies the peak in the middle of the signal
@@ -89,7 +106,7 @@ for p_idx, t_idx in enumerate(self.r_peaks_idx):
 A vectorized algorithm for comparing all the detected templates versus the current selected one is implemented utilizing `numpy` matrix vector operations. While looping over each template it assigns colors for the templates within the same neighbors. This is only needed in case we are trying to plot the peaks with colors declaring peaks belonging to the same template.
 
 ---
-### Template matching \[Kmeans based\]
+### Template matching [Kmeans based]
 
 The code starts first by building a data-set, just a matrix with rows corresponds to samples and columns corresponds to features. A sample has `T` feature where `T` is the window size. Based on the previous calculations performed by the averaging method it is guaranteed that the maximum peak is the middle feature \[Signals are sync.\]
 
