@@ -180,7 +180,7 @@ class EMGFilter(object):
             # then update this template to be the new one [SLIDE 13]
             self.template_matrix[win_idx, :] = template
 
-    def match_templates_kmeans(self, avg_window_size=20, threshold=11.7, num_clusters=2):
+    def match_templates_kmeans(self, avg_window_size=20, threshold=11.7, num_clusters=2, low=0, high=-1):
         """
         Calculates the centers of the MUAPs by the k-means clustering method
 
@@ -204,13 +204,13 @@ class EMGFilter(object):
         + num_clusters : the number of clusters/centers
         """
         # do the filteration stage
-        self.filter_avg(avg_window_size, threshold)
+        self.filter_avg(avg_window_size, threshold, low=low, high=high)
         data_set = np.zeros([self.r_peaks_idx.shape[0], avg_window_size])
         # now collect all the detected peaks, and sync them to obtain an MUAP template
         dist = int(avg_window_size//2)
         for p_idx, t_idx in enumerate(self.r_peaks_idx):
             # build the data-set
-            data_set[p_idx, :] = self.data_filtered_avg[t_idx-dist:t_idx+dist]
+            data_set[p_idx, :] = self.data[t_idx-dist:t_idx+dist]#data_filtered_avg[t_idx-dist:t_idx+dist]
         # get the kmeans object after fitting the dataset
         self.kmeans = KMeans(n_clusters=num_clusters).fit(data_set)
         # now we need to get the lables of the items in the data-set
